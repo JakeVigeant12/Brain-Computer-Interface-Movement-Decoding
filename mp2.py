@@ -13,7 +13,7 @@ from scipy.stats import gaussian_kde
 
 mpl.use('TkAgg')
 DATA_FILE_PATH = "./DataFiles/feaSubE"
-DATA_TYPE = "Overt"
+DATA_TYPE = "Img"
 
 
 def readDataFile(name):
