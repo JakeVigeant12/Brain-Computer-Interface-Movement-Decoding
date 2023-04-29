@@ -134,7 +134,7 @@ def crossVal(X, y):
         clf_curr_fold = None
         current_alpha_val = None
         for lay_2_train_idx, lay_2_test_idx in layer_2.split(curr_train_X):
-            alphas = np.logspace(-2, 4, num=13 * 3 + 1, base=10)
+            alphas = np.logspace(-15, 2, num=13 * 3 + 1, base=10)
             scores = []
             for alpha in alphas:
                 clf = make_pipeline(LinearSVC(dual=False))
@@ -216,7 +216,7 @@ def trainSVM(data0, data1, data0tes, data1tes):
 
     alphas = np.log10(alphas)
     plt.stem(x, alphas)
-    plt.ylim(-2, 4)
+    plt.ylim(-20, 20)
     plt.grid()
     plt.title(DATA_TYPE + " Log10 of Regularization Parameter Values By Fold")
     plt.savefig("./Results/" + DATA_TYPE + "_alpha_values.png")
