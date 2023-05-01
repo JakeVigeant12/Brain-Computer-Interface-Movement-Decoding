@@ -13,7 +13,7 @@ from scipy.stats import gaussian_kde
 
 mpl.use('TkAgg')
 DATA_FILE_PATH = "./DataFiles/feaSubE"
-DATA_TYPE = "Img"
+DATA_TYPE = "Overt"
 
 
 def readDataFile(name):
@@ -134,10 +134,10 @@ def crossVal(X, y):
         clf_curr_fold = None
         current_alpha_val = None
         for lay_2_train_idx, lay_2_test_idx in layer_2.split(curr_train_X):
-            alphas = np.logspace(-15, 2, num=13 * 3 + 1, base=10)
+            alphas = np.logspace(-15, 15, num=13 * 3 + 1, base=10)
             scores = []
             for alpha in alphas:
-                clf = make_pipeline(LinearSVC(dual=False))
+                clf = make_pipeline(LinearSVC(dual=False, max_iter=100000))
                 clf.set_params(linearsvc__C=alpha)
                 curr_train_X_l2 = curr_train_X.iloc[lay_2_train_idx]
                 curr_train_y_l2 = curr_train_y[lay_2_train_idx].T
@@ -160,7 +160,7 @@ def crossVal(X, y):
                     idx = i
             optimalAlpha = alphas[idx]
             clf_curr_fold = Pipeline([
-                ('svm', LinearSVC(dual=False, C=optimalAlpha))
+                ('svm', LinearSVC(dual=False, C=optimalAlpha, max_iter=100000))
             ])
             current_alpha_val = optimalAlpha
         clf_curr_fold.fit(curr_train_X, curr_train_y)
@@ -202,7 +202,7 @@ def trainSVM(data0, data1, data0tes, data1tes):
     data1tes.insert(loc=0, column='', value=1)
 
     # Prepare Data
-    X_test = pd.concat([data0, data1], ignore_index=True)
+    X_test = pd.concat([data0tes, data1tes], ignore_index=True)
     y_test = X_test.iloc[:, 0]
     X_test = X_test.iloc[:, 1:]
 
@@ -211,31 +211,58 @@ def trainSVM(data0, data1, data0tes, data1tes):
     y = X.iloc[:, 0]
     X = X.iloc[:, 1:]
 
-    clf, alphas = crossVal(X, y)
-    x = np.arange(1, 7, 1)
+    # clf, alphas = crossVal(X, y)
+    # x = np.arange(1, 7, 1)
 
-    alphas = np.log10(alphas)
-    plt.stem(x, alphas)
-    plt.ylim(-20, 20)
-    plt.grid()
-    plt.title(DATA_TYPE + " Log10 of Regularization Parameter Values By Fold")
-    plt.savefig("./Results/" + DATA_TYPE + "_alpha_values.png")
-    plt.show()
-
+    # alphas = np.log10(alphas)
+    # plt.stem(x, alphas)
+    # plt.ylim(-20, 20)
+    # plt.grid()
+    # plt.title(DATA_TYPE + " Log10 of Regularization Parameter Values By Fold")
+    # plt.savefig("./Results/" + DATA_TYPE + "_alpha_values.png")
+    # plt.show()
+    clf1 = LinearSVC(max_iter=100000, dual=False)
+    clf1.fit(X, y)
     # predict testing data with decision function
-    preds = clf.decision_function(X_test)
-    testROC = pd.DataFrame(preds)
+    preds1 = clf1.decision_function(X_test)
+    testROC = pd.DataFrame(preds1)
     testROC.insert(loc=0, column='', value=y_test)
+    # Fit other model
+    clf2 = LinearSVC(max_iter=100000, dual = False)
+    clf2.fit(X_test, y_test)
+    preds2 = clf2.decision_function(X)
+    testROC2 = pd.DataFrame(preds2)
+    testROC2.insert(loc=0, column='', value=y_test)
+
+    # Fit inces model
+    clf3 = LinearSVC(max_iter=100000, dual=False)
+    clf3.fit(X, y)
+    preds3 = clf3.decision_function(X)
+    testROC3 = pd.DataFrame(preds3)
+    testROC3.insert(loc=0, column='', value=y)
+
+    # Fit inces model
+    clf4 = LinearSVC(max_iter=100000, dual=False)
+    clf4.fit(X_test, y_test)
+    preds4 = clf4.decision_function(X_test)
+    testROC4 = pd.DataFrame(preds4)
+    testROC4.insert(loc=0, column='', value=y_test)
 
     # generate ROC
     fig, ax = plt.subplots()
     other = "Overt" if DATA_TYPE == "Img" else "Img"
-    plotROC(testROC, ax, "blue", "ROC")
+    plotROC(testROC, ax, "blue", "Trained " + DATA_TYPE + " Tested " + other)
+    plotROC(testROC2, ax, "orange", "Trained " + other + " Tested " + DATA_TYPE)
+    plotROC(testROC3, ax, "pink", "Trained " + DATA_TYPE + " Tested " + DATA_TYPE)
+    plotROC(testROC4, ax, "green", "Trained " + other + " Tested " + other)
+
+
     ax.set_xlabel('Probability False Alarm')
     ax.set_ylabel('Probability Detection')
     ax.grid()
-    fig.suptitle("Trained on " + DATA_TYPE + " Tested on " + other)
-    plt.savefig("./Results/" + DATA_TYPE + "_trained_tested_" + other + ".png")
+    fig.suptitle("Cross-Tested ROCs")
+    plt.legend()
+    plt.savefig("./Results/cross_tested_ROC.png")
 
     plt.show()
 
@@ -328,9 +355,10 @@ def KDEPdf(class0, class1):
     return kde0, kde1
 
 
-train_class1 = readDataFile(DATA_TYPE + "_1")
-train_class2 = readDataFile(DATA_TYPE + "_2")
-test_class1 = readDataFile("Img" + "_1") if DATA_TYPE == "Overt" else readDataFile("Overt" + "_1")
-test_class2 = readDataFile("Img" + "_2") if DATA_TYPE == "Overt" else readDataFile("Overt" + "_2")
+overtClass0 = readDataFile("Overt_1")
+overtClass1 = readDataFile("Overt_2")
 
-trainSVM(train_class1, train_class2, test_class1, test_class2)
+imgClass0 = readDataFile("Img_1")
+imgClass1 = readDataFile("Img_2")
+
+trainSVM(overtClass0, overtClass1, imgClass0, imgClass1)
